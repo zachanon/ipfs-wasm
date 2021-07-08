@@ -1,0 +1,211 @@
+on:
+  push:
+    branches:
+      - trying
+      - staging
+  pull_request:
+    branches: '*'
+
+name: Rust IPFS
+
+jobs:
+  ci-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+        - rust: stable
+
+        platform:
+        - target: x86_64-unknown-linux-gnu
+          host: ubuntu-latest
+          cross: false
+
+        - target: x86_64-apple-darwin
+          host: macos-latest
+          cross: false
+
+        - target: x86_64-pc-windows-msvc
+          host: windows-latest
+          cross: false
+
+        - target: armv7-linux-androideabi
+          host: ubuntu-latest
+          cross: true
+
+        - target: aarch64-linux-android
+          host: ubuntu-latest
+          cross: true
+
+        - target: x86_64-apple-ios
+          host: macos-latest
+          cross: true
+
+        - target: aarch64-apple-ios
+          host: macos-latest
+          cross: true
+
+    env:
+      RUST_BACKTRACE: 1
+      CARGO_INCREMENTAL: 0
+      LLVM_CONFIG_PATH: /usr/local/opt/llvm/bin/llvm-config
+      NDK_HOME: /usr/local/lib/android/sdk/ndk-bundle
+      GO_IPFS_PATH: /home/runner/work/rust-ipfs/rust-ipfs/go-ipfs/ipfs
+      VCPKGRS_DYNAMIC: 1
+      DEBUG: ipfsd-ctl:* # enables all debug output from javascript 'debug' lib used by js-ipfsd-ctl
+
+    runs-on: ${{ matrix.platform.host }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+
+    - name: Cache cargo folder
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ matrix.platform.target }}-dot-cargo-parts-${{ hashFiles('Cargo.lock') }}
+
+    - name: Get npm cache directory
+      id: npm-cache
+      if: matrix.platform.cross == false
+      run: |
+        echo "::set-output name=dir::$(npm config get cache)"
+
+    - name: Cache npm (non-cross targets)
+      uses: actions/cache@v2
+      if: matrix.platform.cross == false
+      with:
+        path: ${{ steps.npm-cache.outputs.dir }}
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/setup.sh', '**/*.patch') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install dependencies ubuntu
+      if: matrix.platform.host == 'ubuntu-latest'
+      run: sudo apt-get install llvm-dev libssl-dev pkg-config
+
+    - name: Install dependencies macos
+      if: matrix.platform.host == 'macos-latest'
+      run: brew install llvm openssl
+
+    - name: Download go-ipfs on Linux
+      if: matrix.platform.host == 'ubuntu-latest'
+      run: |
+        curl -L https://github.com/ipfs/go-ipfs/releases/download/v0.7.0/go-ipfs_v0.7.0_linux-amd64.tar.gz --output go_ipfs.tar.gz
+        tar -xf go_ipfs.tar.gz
+
+    - name: Install dependencies windows (openssl)
+      uses: lukka/run-vcpkg@v4.1
+      id: windows-runvcpkg
+      if: matrix.platform.host == 'windows-latest'
+      with:
+        vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+        vcpkgTriplet: 'x64-windows'
+        vcpkgArguments: 'openssl'
+        vcpkgGitCommitId: 'ffa41582f78478812c836a6e8ce315fb27431182'  # ok for openssl-sys v0.9.58
+
+    - name: Install rust toolchain
+      uses: hecrj/setup-rust-action@v1.3.4
+      with:
+        rust-version: ${{ matrix.toolchain.rust }}
+        targets: ${{ matrix.platform.target }}
+
+    - name: Install cargo-ndk
+      if: contains(matrix.platform.target, 'android')
+      run: cargo install --version '<2.0.0' cargo-ndk
+
+    - name: Build (others)
+      if: matrix.platform.cross == false
+      run: cargo build --locked --workspace --all-targets
+
+    - name: Run interop DHT tests with go-ipfs
+      if: matrix.platform.host == 'ubuntu-latest' && matrix.platform.cross == false
+      run: cargo test --features=test_go_interop dht
+
+    - name: Setup conformance tests (non-cross targets)
+      if: matrix.platform.cross == false
+      run: ./setup.sh
+      shell: bash
+      working-directory: ./conformance
+
+    - name: Build (android)
+      if: contains(matrix.platform.target, 'android')
+      run: cargo ndk --android-platform 29 --target ${{ matrix.platform.target }} build --locked --workspace --exclude ipfs-http
+      # exclude http on android because openssl
+
+    - name: Build other cross compilations
+      if: contains(matrix.platform.target, 'android') == false && matrix.platform.cross == true
+      run: cargo build --locked --workspace --exclude ipfs-http --target ${{ matrix.platform.target }}
+      # exclude http on other cross compilation targets because openssl
+
+    - name: Rust tests (macos)
+      if: matrix.platform.cross == false && matrix.platform.host == 'macos-latest'
+      run: |
+          ulimit -c unlimited
+          sudo touch /cores/test || { ls -ld /cores; exit 1; }
+          sudo rm /cores/test
+          retval=0
+          sudo cargo test --workspace || retval=$?
+          sudo chmod -R a+rwx /cores
+          exit $retval
+
+    - name: Rust tests (other non-cross targets)
+      if: matrix.platform.cross == false && matrix.platform.host != 'macos-latest'
+      run: cargo test --workspace
+
+    - name: Conformance testing (non-cross targets)
+      if: matrix.platform.cross == false
+      run: IPFS_RUST_EXEC=../target/debug/ipfs-http npm test
+      shell: bash
+      working-directory: ./conformance
+
+    - name: Upload crashes (macos)
+      uses: actions/upload-artifact@v2
+      if: ${{ always() }}
+      with:
+        name: macos.crashes
+        path: /cores
+        if-no-files-found: ignore
+
+  lint-rust:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+
+    - name: Cache cargo folder
+      uses: actions/cache@v2
+      with:
+        path: ~/.cargo
+        key: lint-cargo-${{ hashFiles('Cargo.lock') }}
+
+    - name: Install rust toolchain
+      uses: hecrj/setup-rust-action@v1.3.4
+      with:
+        rust-version: stable
+        components: clippy, rustfmt
+
+    - name: cargo fmt
+      run: cargo fmt --all -- --check
+
+    - name: cargo clippy
+      run: cargo clippy --all-targets --workspace -- -D warnings
+
+  # adapted from https://github.com/taiki-e/pin-project/blob/5878410863f5f25e21f7cba97b035501749850f9/.github/workflows/ci.yml#L136-L167
+  # further enchanced following solutions to
+  # https://github.com/bors-ng/bors-ng/issues/1115 -- bors now considers the
+  # skipped task a failure, or overrides the status for a task with a same name
+  # with the one which came later.
+  ci-success:
+      # this is read by bors
+      name: ci
+      if: github.event_name == 'push' && success()
+      needs:
+        - ci-matrix
+        - lint-rust
+      runs-on: ubuntu-latest
+      steps:
+        - name: Mark the job as a success
+          run: exit 0
