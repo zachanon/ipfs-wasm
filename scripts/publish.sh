@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker-compose exec server ipfs add -r ../payload
+docker-compose exec server ipfs add -r data/payload
