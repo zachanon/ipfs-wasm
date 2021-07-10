@@ -19,7 +19,7 @@ This will call your ipfs daemon to publish its payload.
 
 Take the root cid hash and edit it in here to view your build
 
-http://localhost:8080/ipfs/<cid hash>
+http://localhost:8080/ipfs/\<cid hash\>
 
 ```
 ./scripts/publish.sh
