@@ -1,0 +1,20 @@
+version: "3.5"
+services:
+    builder:
+        container_name: 'rs-wasm-builder'
+        build:
+            context: rs-wasm
+            dockerfile: rs-wasm-builder.Dockerfile
+        volumes:
+            - ./rs-wasm/build:/usr/app
+    server:
+        container_name: 'rs-wasm-server'
+        build:
+            context: rs-wasm
+            dockerfile: rs-wasm-server.Dockerfile
+        volumes:
+            - ./rs-wasm/build:/usr/app
+        ports:
+            - 8080:8080
+        stdin_open: true # docker run -i
+        tty: true        # docker run -t
