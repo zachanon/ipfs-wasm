@@ -1,4 +1,4 @@
-import { Universe } from "./rs-wasm.js";
+import { Universe } from "./rs_wasm.js";
 
 const pre = document.getElementById("canvas");
 const universe = Universe.new();

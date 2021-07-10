@@ -13,7 +13,8 @@ services:
             context: rs-wasm
             dockerfile: rs-wasm-server.Dockerfile
         volumes:
-            - ./rs-wasm/serve:/data/ipfs
+            - ./rs-wasm/serve/ipfs:/data/ipfs
+            - ./rs-wasm/serve/payload:/data/payload
         ports:
             - 4001:4001
             - 4001:4001/udp
