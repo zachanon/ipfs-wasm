@@ -13,8 +13,9 @@ services:
             context: rs-wasm
             dockerfile: rs-wasm-server.Dockerfile
         volumes:
-            - ./rs-wasm/build:/usr/app
+            - ./rs-wasm/build:/data/ipfs
         ports:
-            - 8080:8080
-        stdin_open: true # docker run -i
-        tty: true        # docker run -t
+            - 4001:4001
+            - 4001:4001/udp
+            - 127.0.0.1:8080:8080 
+            - 127.0.0.1:5001:5001
