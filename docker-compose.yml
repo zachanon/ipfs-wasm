@@ -1,0 +1,22 @@
+version: "3.5"
+services:
+    builder:
+        container_name: 'rs-wasm-builder'
+        build:
+            context: rs-wasm
+            dockerfile: rs-wasm-builder.Dockerfile
+        volumes:
+            - ./rs-wasm/build:/usr/app
+    server:
+        container_name: 'rs-wasm-server'
+        build:
+            context: rs-wasm
+            dockerfile: rs-wasm-server.Dockerfile
+        volumes:
+            - ./rs-wasm/serve/ipfs:/data/ipfs
+            - ./rs-wasm/serve/payload:/data/payload
+        ports:
+            - 4001:4001
+            - 4001:4001/udp
+            - 127.0.0.1:8080:8080 
+            - 127.0.0.1:5001:5001
