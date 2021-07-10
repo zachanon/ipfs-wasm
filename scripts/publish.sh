@@ -1,5 +1,8 @@
 #!/bin/bash
 
-cp -r rs-wasm/build/pkg build/
-cp -r rs-wasm/build/index* build/
-docker-compose run server ipfs add rs-wasm/build/
+cp -r rs-wasm/build/pkg /tmp/temp
+cp rs-wasm/index* /tmp/temp
+mv /tmp/temp rs-wasm/serve/build
+
+docker-compose run -d server
+docker-compose exec server ipfs add build

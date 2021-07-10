@@ -1,5 +1,8 @@
 #!/bin/bash
-mkdir rs-wasm/build && \
-cp -r rs-wasm/* rs-wasm/build
 
+#copy into a build directory
+cp -r rs-wasm/ /tmp/TEMP
+mv /tmp/TEMP rs-wasm/build/
+
+#run the compiler
 docker-compose run builder wasm-pack build
