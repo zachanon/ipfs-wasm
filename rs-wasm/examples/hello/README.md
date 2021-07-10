@@ -1,16 +1,18 @@
-# ipfs-wasm
+# ipfs-wasm/examples/hello
+
+A `hello world` style template
 
 ### Build and Serve
 
 #### Compile
 
 ```
-./scripts/build.sh
+./scripts/hello.build.sh
 ```
 #### Launch an IPFS daemon with the build payload
 
 ```
-./scripts/node.sh
+./scripts/hello.node.sh
 ```
 
 #### Publish the build to IPFS
@@ -22,7 +24,7 @@ Take the root cid hash and edit it in here to view your build
 http://localhost:8080/ipfs/\<cid hash\>
 
 ```
-./scripts/publish.sh
+./scripts/hello.publish.sh
 ```
 
 ##### **NOTICE**
