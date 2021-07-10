@@ -1,0 +1,22 @@
+version: "3.5"
+services:
+    builder:
+        container_name: 'hello-wasm-builder'
+        build:
+            context: ""
+            dockerfile: hello-wasm-builder.Dockerfile
+        volumes:
+            - ./build:/usr/app
+    server:
+        container_name: 'hello-wasm-server'
+        build:
+            context: ""
+            dockerfile: hello-wasm-server.Dockerfile
+        volumes:
+            - ./serve/ipfs:/data/ipfs
+            - ./serve/payload:/data/payload
+        ports:
+            - 4001:4001
+            - 4001:4001/udp
+            - 127.0.0.1:8080:8080 
+            - 127.0.0.1:5001:5001

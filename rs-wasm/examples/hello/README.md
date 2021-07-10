@@ -1,33 +1,31 @@
-# ipfs-wasm
+# ipfs-wasm/examples/hello
+
+A `hello world` style template
 
 ### Build and Serve
 
 #### Compile
 
 ```
-./scripts/build.sh
+./scripts/hello.build.sh
 ```
 #### Launch an IPFS daemon with the build payload
 
 ```
-./scripts/node.sh
+./scripts/hello.node.sh
 ```
 
 #### Publish the build to IPFS
 
 This will call your ipfs daemon to publish its payload.
 
-```
-./scripts/publish.sh
-```
-
 Take the root cid hash and edit it in here to view your build
 
 http://localhost:8080/ipfs/\<cid hash\>
 
-Example (result of current build payload):
-
-http://localhost:8080/ipfs/Qme7VNhQgnEguh2PGxSt7rZQsm5gfhzah5pBwHGXM626ez
+```
+./scripts/hello.publish.sh
+```
 
 ##### **NOTICE**
 ```Error: lock /data/ipfs/repo.lock: someone else has the lock```
